@@ -56,26 +56,13 @@ template<>
 void radix::CudaRadix<unsigned int>::operator ()(unsigned int* a, size_t len) const
 {
     unsigned int* d_a, *d_d;
-    cudaMalloc((void**)&d_a, len);
-    cudaMemcpy(d_a, a, len, cudaMemcpyHostToDevice);
-
-    cudaMalloc((void**)&d_d, len);
+    cudaMalloc((void**)&d_a, len * sizeof(unsigned int));
+    cudaMemcpy(d_a, a, len * sizeof(unsigned int), cudaMemcpyHostToDevice);
+    cudaMalloc((void**)&d_d, len * sizeof(unsigned int));
 
     cuda_radix_coller(d_a, d_d, len);
-//        unsigned int *s = a;
-//        unsigned int *d = new unsigned int[len];
-//        unsigned int *t;
-//        unsigned bit, is, id0, id1;
 
-//        for (bit = 1; bit; bit <<= 1, t = s, s = d, d = t)
-//            for (is = id0 = 0, id1 = len; id1 > id0; ++is)
-//                //reopder by Gray order
-//                if (((s[is] >> 1) ^ s[is]) & bit)
-//                    d[--id1] = s[is];
-//                else
-//                    d[id0++] = s[is];
-//        delete[] d;
-    cudaMemcpy(a, d_a, len, cudaMemcpyDeviceToHost);
+    cudaMemcpy(a, d_a, len * sizeof(unsigned int), cudaMemcpyDeviceToHost);
     cudaFree((void**)d_a);
     cudaFree((void**)&d_d);
 }
