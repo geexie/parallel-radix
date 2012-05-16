@@ -1,54 +1,50 @@
 #include <cuda_radix.h>
-#include<iostream>
+#include <iostream>
+#include <traits.hpp>
 
-typedef unsigned int ui;
-
-__global__ void bitonic_sort_step(ui *dev_values, int j, int k)
+template<typename T>
+__global__ void bitonic_sort_step(T *a, int j, int k)
 {
-    unsigned int i, ixj; /* Sorting partners: i and ixj */
-    i = threadIdx.x + blockDim.x * blockIdx.x;
-    ixj = i^j;
+    size_t i = threadIdx.x + blockDim.x * blockIdx.x;
+    size_t ixj = i^j;
 
-    if ((ixj)>i)
+    if (ixj > i)
     {
-        if ((i&k)==0)
+        if ((i & k) == 0)
         {
-            /* Sort ascending */
-            if (dev_values[i]>dev_values[ixj])
+            if (a[i] > a[ixj])
             {
-                /* exchange(i,ixj); */
-                float temp = dev_values[i];
-                dev_values[i] = dev_values[ixj];
-                dev_values[ixj] = temp;
+                T temp = a[i];
+                a[i] = a[ixj];
+                a[ixj] = temp;
             }
         }
-        if ((i&k)!=0)
+        if ((i & k) != 0)
         {
-            /* Sort descending */
-            if (dev_values[i]<dev_values[ixj])
+            if (a[i] < a[ixj])
             {
-                /* exchange(i,ixj); */
-                float temp = dev_values[i];
-                dev_values[i] = dev_values[ixj];
-                dev_values[ixj] = temp;
+                T temp = a[i];
+                a[i] = a[ixj];
+                a[ixj] = temp;
             }
         }
     }
 }
-
-__device__ void blelloch_scan_step(ui *g_idata, ui *g_odata , int n, ui _bit, int shift)
+template<typename T>
+__device__ void blelloch_scan_step(T *g_idata, T *g_odata , int n, typename radix::radix_traits<T>::integer_type _bit, int shift)
 {
-    extern __shared__ ui temp1[];
+    typedef typename radix::radix_traits<T>::integer_type I;
+    extern __shared__ char temp1[];
     int thid = threadIdx.x;
     int global_tid = blockIdx.x * blockDim.x * 2;
-    ui* bit = &temp1[0];
-    ui* idx = &temp1[n];
+    I* bit = &((I*)temp1)[0];
+    I* idx = &((I*)temp1)[n];
     size_t tid_offset = 2 * thid;
     {
         int offset = 1;
-        bit[2 * thid] = ((g_idata[global_tid + tid_offset] & _bit) >> shift);
+        bit[2 * thid] = (((I)g_idata[global_tid + tid_offset] & _bit) >> shift);
         idx[2 * thid] = 1 - bit[tid_offset];
-        bit[2 * thid + 1] = ((g_idata[global_tid + tid_offset + 1] & _bit) >> shift);
+        bit[2 * thid + 1] = (((I)g_idata[global_tid + tid_offset + 1] & _bit) >> shift);
         idx[2 * thid + 1] = 1 - bit[tid_offset + 1];
 
         __syncthreads();
@@ -84,49 +80,72 @@ __device__ void blelloch_scan_step(ui *g_idata, ui *g_odata , int n, ui _bit, in
             }
         }
         __syncthreads();
-        ui middle = idx[n - 1] + 1 - bit[n - 1];
+        size_t middle = idx[n - 1] + 1 - bit[n - 1];
 
         idx[tid_offset]     = (bit[tid_offset + 0])? (tid_offset     - idx[tid_offset + 0] + bit[tid_offset + 0] * middle) : idx[tid_offset + 0];
         idx[tid_offset + 1] = (bit[tid_offset + 1])? (tid_offset + 1 - idx[tid_offset + 1] + bit[tid_offset + 1] * middle) : idx[tid_offset + 1];
 
         __syncthreads();
-        bit[idx[tid_offset + 0]] = g_idata[global_tid + tid_offset + 0];
-        bit[idx[tid_offset + 1]] = g_idata[global_tid + tid_offset + 1];
+        T* tm = &((T*)temp1)[0];
+        tm[idx[tid_offset + 0]] = g_idata[global_tid + tid_offset + 0];
+        tm[idx[tid_offset + 1]] = g_idata[global_tid + tid_offset + 1];
         size_t step  = ((shift == 31) && (blockIdx.x & 1))?blockDim.x * 2 - tid_offset -1: tid_offset;
         size_t step1 = ((shift == 31) && (blockIdx.x & 1))?blockDim.x * 2 - tid_offset -2 : tid_offset + 1;
          __syncthreads();
-        g_odata[global_tid + tid_offset + 0] = bit[step];
-        g_odata[global_tid + tid_offset + 1] = bit[step1];
+        g_odata[global_tid + tid_offset + 0] = tm[step];
+        g_odata[global_tid + tid_offset + 1] = tm[step1];
     }
 }
 
-__global__ void blelloch_scan_radix(ui *a_p, ui *d_p , int n)
+template<typename T>
+__global__ void blelloch_scan_radix(T *a_p, T *d_p , int len)
 {
-    int iter = 0;
-
-    for (ui _bit = 1; _bit; _bit <<= 1)
+    int shift = 0;
+    typedef typename radix::radix_traits<T>::integer_type I;
+    for (I _bit = 1; _bit; _bit <<= 1)
     {
         __syncthreads();
-        if(iter % 2 == 0)
-            blelloch_scan_step(a_p, d_p, n, _bit, iter++);
+        if(shift % 2 == 0)
+            blelloch_scan_step<T>(a_p, d_p, len, _bit, shift++);
         else
-            blelloch_scan_step(d_p, a_p, n, _bit, iter++);
+            blelloch_scan_step<T>(d_p, a_p, len, _bit, shift++);
 
+    }
+}
+
+template<typename T>
+void cuda_radix_coller_internal(T* a, T* d, size_t len)
+{
+    int threads = 256;
+    int log_threads = 8;
+    int groups = len >> log_threads;
+    blelloch_scan_radix<T><<<groups, (threads >> 1), 2 * threads * 4>>>(a, d, threads);
+
+    for (size_t k = threads; k <= len; k <<= 1)
+    {
+        for (size_t j = k>>1; j > 0; j = j>>1)
+        {
+            //bitonic_sort_step<T><<<groups, threads >>>(a, j, k);
+        }
     }
 }
 
 void cuda_radix_coller(unsigned int* a, unsigned int* d, size_t len)
 {
-    int threads = 256;
-    int log_threads = 8;
-    int groups = len >> log_threads;
-    blelloch_scan_radix<<<groups, (threads >> 1), 2 * threads * 4>>>(a, d, threads);
+    cuda_radix_coller_internal<unsigned int>(a,d,len);
+}
 
-    for ( size_t k = threads; k <= len; k <<= 1)
-    {
-        for (size_t j=k>>1; j>0; j=j>>1)
-        {
-            bitonic_sort_step<<<groups, threads >>>(a, j, k);
-        }
-    }
+void cuda_radix_coller(signed int* a, signed int* d, size_t len)
+{
+    cuda_radix_coller_internal<signed int>(a,d,len);
+}
+
+void cuda_radix_coller(float* a, float* d, size_t len)
+{
+    cuda_radix_coller_internal<float>(a,d,len);
+}
+
+void cuda_radix_coller(double* a, double* d, size_t len)
+{
+    cuda_radix_coller_internal<double>(a,d,len);
 }
