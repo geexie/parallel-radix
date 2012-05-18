@@ -2,6 +2,7 @@
 #define __correctness_test_hpp__
 #include <random>
 #include <sort_algorithm.hpp>
+#include <bitset>
 
 template<typename T>
 struct random_traits{};
@@ -63,7 +64,10 @@ bool sortCorrectnessTest(size_t size, T l_bound, T r_bound)
     {
         if(*(gold + i) != *(arr + i))
         {
-            std::cout << "expected " << (*(gold + i)) << "\tactual " << (*(arr + i))<< "\tfor " << i << std::endl;
+            std::cout <<"\t" << std::bitset<32>(((*(int*)(gold + i)) >> 1) ^ (*(int*)(gold + i)))
+                      << "\t" "expected " << (*(gold + i))
+                      <<"\t" << std::bitset<32>(((*(int*)(arr + i)) >> 1) ^ (*(int*)(arr + i)))
+                      << "\t" <<"\tactual " << (*(arr + i))<< "\tfor " << i << std::endl;
             result = false;
         }
     }
