@@ -84,19 +84,19 @@ int main(int args, char** argv)
 
     std::cout << "Cuda based radix ..." << std::endl;
 
-    res = sortCorrectnessTest<unsigned int, radix::CudaRadix<unsigned int> >(10000, 0, 10000);
+    res = sortCorrectnessTest<unsigned int, radix::CudaRadix<unsigned int> >(16384, 0, 10000);
     assert(res);
     std::cout << "Radix sort for type: unsigned int passed" << std::endl;
 
-    res = sortCorrectnessTest<int, radix::CudaRadix<int> >(10000, -5000, 5000);
+    res = sortCorrectnessTest<int, radix::CudaRadix<int> >(16384, -5000, 5000);
     assert(res);
     std::cout << "Radix sort for type: signed int passed" << std::endl;
 
-    res = sortCorrectnessTest<float, radix::CudaRadix<float> >(10000, -5000.f, 5000.f);
+    res = sortCorrectnessTest<float, radix::CudaRadix<float> >(16384, -256.0f, 256.0f);
     assert(res);
     std::cout << "Radix sort for type: single presition floating point passed" << std::endl;
 
-    res = sortCorrectnessTest<double, radix::CudaRadix<double> >(10000, -5000, 5000);
+      sortCorrectnessTest<double, radix::CudaRadix<double> >(16384, -256.0, 256.0);
     assert(res);
     std::cout << "Radix sort for type: double presition floating point passed" << std::endl;
 
