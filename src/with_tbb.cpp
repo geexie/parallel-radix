@@ -18,36 +18,37 @@ public:
     TBBRadixScanTask(I* _a, I* _d, size_t _n, I _bit)
         : x(_a), y(_d), l_bound(0), r_bound(0), n(_n), bit(_bit){}
 
-    template<typename Tag>
-    void operator()( const tbb::blocked_range<int>& r, Tag )
+    void operator()( const tbb::blocked_range<int>& r, tbb::pre_scan_tag )
     {
         Ord order;
-        size_t old_l_bound = l_bound;
-        size_t old_r_bound = r_bound;
-        int i = 0;
-
-        for(i = r.begin(); i < r.end(); ++i)
+        for(int i = r.begin(); i < r.end(); ++i)
         {
             if (order(x[i], bit))
                 ++r_bound;
             else
                 ++l_bound;
         }
+    }
 
-        if( Tag::is_final_scan() )
+    void operator()( const tbb::blocked_range<int>& r, tbb::final_scan_tag)
+    {
+        size_t k = 0;
+        int m = 0;
+        Ord order;
+        for(int i = r.begin(); i < r.end(); ++i )
         {
-            size_t k = 0;
-            int m = 0;
-            for(i = r.begin(); i < r.end(); ++i )
+            if (order(x[i], bit))
             {
-                if (order(x[i], bit))
-                    y[n - old_r_bound -1 + m--] = x[i];
-                else
-                    y[old_l_bound + k++] = x[i];
+                y[n - r_bound -1] = x[i];
+                ++r_bound;
+            }
+            else
+            {
+                y[l_bound++] = x[i];
             }
         }
-
     }
+
     TBBRadixScanTask( TBBRadixScanTask& b, tbb::split ) : x(b.x), y(b.y),l_bound(0), r_bound(0), n(b.n), bit(b.bit) {}
     void reverse_join( TBBRadixScanTask& a )
     {

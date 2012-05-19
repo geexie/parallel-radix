@@ -36,14 +36,14 @@ class OpenMPRadix
 {
 public:
     OpenMPRadix();
-    ~OpenMPRadix<T>();
+    ~OpenMPRadix();
     void operator ()(T* arr, size_t size) const;
 private:
     size_t num_threads;
-    unsigned int* partial;
-    unsigned int* partial1;
-    unsigned int* temp;
-    unsigned int* temp1;
+    unsigned int* l_partial;
+    unsigned int* r_partial;
+    unsigned int* l_sum;
+    unsigned int* r_sum;
 };
 
 template<typename T>

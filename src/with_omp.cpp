@@ -14,19 +14,19 @@ radix::OpenMPRadix<T>::OpenMPRadix()
     }
 
     num_threads = num;
-    partial =   new unsigned int[num_threads];
-    partial1 =  new unsigned int[num_threads];
-    temp =      new unsigned int[num_threads];
-    temp1 =     new unsigned int[num_threads];
+    l_partial =   new unsigned int[num_threads];
+    r_partial =  new unsigned int[num_threads];
+    l_sum =      new unsigned int[num_threads];
+    r_sum =     new unsigned int[num_threads];
 }
 
 template<typename T>
 radix::OpenMPRadix<T>::~OpenMPRadix()
 {
-    delete[] partial;
-    delete[] partial1;
-    delete[] temp;
-    delete[] temp1;
+    delete[] l_partial;
+    delete[] r_partial;
+    delete[] l_sum;
+    delete[] r_sum;
 }
 
 template<typename T>
@@ -45,35 +45,35 @@ void radix::OpenMPRadix<T>::operator ()(T* typed_a, size_t len) const
 #pragma omp parallel default(none) private(i, mynum, last) shared(bit, a, d, t, work, len)
         {
             mynum = omp_get_thread_num();
-            partial[mynum]= partial1[mynum] = 0;
+            l_partial[mynum]= r_partial[mynum] = 0;
 
             for(i = work * mynum; i < work * mynum + work && i < len; i++)
                if(!(a[i] & bit))
-                   partial[mynum] += 1;
+                   l_partial[mynum] += 1;
                else
-                   partial1[mynum] += 1;
+                   r_partial[mynum] += 1;
 #pragma omp barrier
 
-            temp[mynum]= temp1[mynum] = 0;
+            l_sum[mynum]= r_sum[mynum] = 0;
             int border = 0;
             for(i = 0; i < num_threads; i++)
             {
                 if(mynum > i)
                 {
-                    temp[mynum] += partial[i];
-                    temp1[mynum] += partial1[i];
+                    l_sum[mynum] += l_partial[i];
+                    r_sum[mynum] += r_partial[i];
                 }
 
-                border += partial[i];
+                border += l_partial[i];
             }
 
 #pragma omp barrier
 
             for(i = work * mynum; i < (last = work * mynum + work < len ? work * mynum + work : len); i++)
                 if(!(a[i] & bit))
-                    d[temp[mynum]++] = a[i];
+                    d[l_sum[mynum]++] = a[i];
                 else
-                    d[border + temp1[mynum]++] = a[i];
+                    d[border + r_sum[mynum]++] = a[i];
         }
     }
 
@@ -81,34 +81,34 @@ void radix::OpenMPRadix<T>::operator ()(T* typed_a, size_t len) const
 #pragma omp parallel default(none) private(i, mynum, last) shared(a, d, t, work, len)
         {
             mynum = omp_get_thread_num();
-            partial[mynum]= partial1[mynum] = 0;
+            l_partial[mynum]= r_partial[mynum] = 0;
 
             for(i = work * mynum; i < work * mynum + work && i < len; i++)
                if((a[i] & radix::radix_traits<T>::MSB_mask))
-                   partial[mynum] += 1;
+                   l_partial[mynum] += 1;
                else
-                   partial1[mynum] += 1;
+                   r_partial[mynum] += 1;
 #pragma omp barrier
-            temp[mynum]= temp1[mynum] = 0;
+            l_sum[mynum]= r_sum[mynum] = 0;
             int border = 0;
             for(i = 0; i < num_threads; i++)
             {
                 if(mynum > i)
                 {
-                    temp[mynum] += partial[i];
-                    temp1[mynum] += partial1[i];
+                    l_sum[mynum] += l_partial[i];
+                    r_sum[mynum] += r_partial[i];
                 }
 
-                border += partial[i];
+                border += l_partial[i];
             }
 
 #pragma omp barrier
 
             for(i = work * mynum; i < (last = work * mynum + work < len ? work * mynum + work : len); i++)
                 if((a[i] & radix::radix_traits<T>::MSB_mask))
-                    d[border -1 - temp[mynum]++] = a[i];
+                    d[border -1 - l_sum[mynum]++] = a[i];
                 else
-                    d[border + temp1[mynum]++] = a[i];
+                    d[border + r_sum[mynum]++] = a[i];
         }
     t = a; a = d; d = t;
     delete[] d;
@@ -127,34 +127,34 @@ void radix::OpenMPRadix<signed int>::operator ()(signed int* a, size_t len) cons
 #pragma omp parallel default(none) private(i, mynum, last) shared(bit, a, d, t, work, len)
         {
             mynum = omp_get_thread_num();
-            partial[mynum]= partial1[mynum] = 0;
+            l_partial[mynum]= r_partial[mynum] = 0;
 
             for(i = work * mynum; i < work * mynum + work && i < len; i++)
                if(!(a[i] & bit))
-                   partial[mynum] += 1;
+                   l_partial[mynum] += 1;
                else
-                   partial1[mynum] += 1;
+                   r_partial[mynum] += 1;
 #pragma omp barrier
-            temp[mynum]= temp1[mynum] = 0;
+            l_sum[mynum]= r_sum[mynum] = 0;
             int border = 0;
             for(i = 0; i < num_threads; i++)
             {
                 if(mynum > i)
                 {
-                    temp[mynum] += partial[i];
-                    temp1[mynum] += partial1[i];
+                    l_sum[mynum] += l_partial[i];
+                    r_sum[mynum] += r_partial[i];
                 }
 
-                border += partial[i];
+                border += l_partial[i];
             }
 
 #pragma omp barrier
 
             for(i = work * mynum; i < (last = work * mynum + work < len ? work * mynum + work : len); i++)
                 if(!(a[i] & bit))
-                    d[temp[mynum]++] = a[i];
+                    d[l_sum[mynum]++] = a[i];
                 else
-                    d[border + temp1[mynum]++] = a[i];
+                    d[border + r_sum[mynum]++] = a[i];
         }
     }
     //MSD
@@ -162,34 +162,34 @@ void radix::OpenMPRadix<signed int>::operator ()(signed int* a, size_t len) cons
 #pragma omp parallel default(none) private(i, mynum, last) shared(a, d, t, work, len)
         {
             mynum = omp_get_thread_num();
-            partial[mynum]= partial1[mynum] = 0;
+            l_partial[mynum]= r_partial[mynum] = 0;
 
             for(i = work * mynum; i < work * mynum + work && i < len; i++)
                if((a[i] & 0x80000000U))
-                   partial[mynum] += 1;
+                   l_partial[mynum] += 1;
                else
-                   partial1[mynum] += 1;
+                   r_partial[mynum] += 1;
 #pragma omp barrier
-            temp[mynum]= temp1[mynum] = 0;
+            l_sum[mynum]= r_sum[mynum] = 0;
             int border = 0;
             for(i = 0; i < num_threads; i++)
             {
                 if(mynum > i)
                 {
-                    temp[mynum] += partial[i];
-                    temp1[mynum] += partial1[i];
+                    l_sum[mynum] += l_partial[i];
+                    r_sum[mynum] += r_partial[i];
                 }
 
-                border += partial[i];
+                border += l_partial[i];
             }
 
 #pragma omp barrier
 
             for(i = work * mynum; i < (last = work * mynum + work < len ? work * mynum + work : len); i++)
                 if((a[i] & 0x80000000U))
-                    d[temp[mynum]++] = a[i];
+                    d[l_sum[mynum]++] = a[i];
                 else
-                    d[border + temp1[mynum]++] = a[i];
+                    d[border + r_sum[mynum]++] = a[i];
         }
 
     t = a; a = d; d = t;
@@ -203,41 +203,41 @@ void radix::OpenMPRadix<unsigned int>::operator ()(unsigned int* a, size_t len) 
     unsigned int* t = 0;
 
     size_t work = len / num_threads + 1;
-    size_t i, mynum, last;
+    size_t i, tid, last;
     unsigned int bit = 1;
     for(bit = 1; bit; bit <<=1, t = a, a = d, d = t)
     {
-#pragma omp parallel default(none) private(i, mynum, last) shared(bit, a, d, t, work, len)
+#pragma omp parallel default(none) private(i, tid, last) shared(bit, a, d, t, work, len)
         {
-            mynum = omp_get_thread_num();
-            partial[mynum]= partial1[mynum] = 0;
+            tid = omp_get_thread_num();
+            l_partial[tid]= r_partial[tid] = 0;
 
-            for(i = work * mynum; i < work * mynum + work && i < len; i++)
+            for(i = work * tid; i < work * tid + work && i < len; i++)
                if(!(a[i] & bit))
-                   partial[mynum] += 1;
+                   l_partial[tid] += 1;
                else
-                   partial1[mynum] += 1;
+                   r_partial[tid] += 1;
 #pragma omp barrier
-            temp[mynum]= temp1[mynum] = 0;
+            l_sum[tid]= r_sum[tid] = 0;
             int border = 0;
             for(i = 0; i < num_threads; i++)
             {
-                if(mynum > i)
+                if(tid > i)
                 {
-                    temp[mynum] += partial[i];
-                    temp1[mynum] += partial1[i];
+                    l_sum[tid] += l_partial[i];
+                    r_sum[tid] += r_partial[i];
                 }
 
-                border += partial[i];
+                border += l_partial[i];
             }
 
 #pragma omp barrier
 
-            for(i = work * mynum; i < (last = work * mynum + work < len ? work * mynum + work : len); i++)
+            for(i = work * tid; i < (last = work * tid + work < len ? work * tid + work : len); i++)
                 if(!(a[i] & bit))
-                    d[temp[mynum]++] = a[i];
+                    d[l_sum[tid]++] = a[i];
                 else
-                    d[border + temp1[mynum]++] = a[i];
+                    d[border + r_sum[tid]++] = a[i];
         }
     }
     delete[] d;

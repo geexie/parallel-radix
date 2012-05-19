@@ -96,7 +96,7 @@ int main(int args, char** argv)
     assert(res);
     std::cout << "Radix sort for type: single presition floating point passed" << std::endl;
 
-      sortCorrectnessTest<double, radix::CudaRadix<double> >(16384, -256.0, 256.0);
+    sortCorrectnessTest<double, radix::CudaRadix<double> >(16384, -256.0, 256.0);
     assert(res);
     std::cout << "Radix sort for type: double presition floating point passed" << std::endl;
 
