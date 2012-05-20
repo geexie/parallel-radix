@@ -47,8 +47,8 @@ __device__ void blelloch_scan_step(T *g_idata, T *g_odata , size_t n,typename ra
 
     int offset = 1;
 
-    bit[2 * thid + 0] = ((radix::radix_traits<T>::as_integer(g_idata[global_tid + tid_offset]) & _bit) >> shift);
-    bit[2 * thid + 1] = ((radix::radix_traits<T>::as_integer(g_idata[global_tid + tid_offset + 1]) & _bit) >> shift);
+    bit[2 * thid + 0] = ((I)(radix::radix_traits<T>::as_integer(g_idata[global_tid + tid_offset]) & _bit) >> shift);
+    bit[2 * thid + 1] = ((I)(radix::radix_traits<T>::as_integer(g_idata[global_tid + tid_offset + 1]) & _bit) >> shift);
 
     idx[2 * thid + 0] = 1 - bit[tid_offset + 0];
     idx[2 * thid + 1] = 1 - bit[tid_offset + 1];
@@ -132,7 +132,7 @@ void cuda_radix_coller_internal(T* a, T* d, size_t len)
     int log_threads = 8;
     int groups = (len <= 256) ? 1 : len >> log_threads;
     blelloch_scan_radix<T><<<groups, (threads >> 1), 2 * threads * sizeof(T)>>>(a, d, threads);
-
+    cudaDeviceSynchronize();
     if(len > 256)
         for (size_t k = threads; k <= len; k <<= 1)
         {

@@ -20,10 +20,10 @@ struct radix_traits<signed int>
 #ifdef __CUDA_ARCH__
     static __device__ __forceinline__ size_t index(size_t tid_offset, size_t middle)
     {
-        if (blockIdx.x & 1)
+        if (!blockIdx.x & 1)
             return (tid_offset < middle) ? tid_offset + (blockDim.x << 1) - middle : tid_offset - middle;
         else
-            return (tid_offset < middle) ? -tid_offset + middle : tid_offset;
+            return (tid_offset < middle) ? middle - 1 - tid_offset :((blockDim.x << 1) - (tid_offset - middle) - 1);
     }
     static __device__ __forceinline__ bit_extract_type as_integer(unsigned int x)
     {
