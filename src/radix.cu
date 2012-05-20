@@ -91,21 +91,16 @@ __device__ void blelloch_scan_step(T *g_idata, T *g_odata , size_t n,typename ra
     idx[tid_offset + 1] = (bit[tid_offset + 1])? (tid_offset + 1 - idx[tid_offset + 1] + middle) : idx[tid_offset + 1];
 
     __syncthreads();
-    T* buffer = &((T*)temp1)[0];
-    buffer[idx[tid_offset + 0]] = g_idata[global_tid + tid_offset + 0];
-    buffer[idx[tid_offset + 1]] = g_idata[global_tid + tid_offset + 1];
-
-    __syncthreads();
 
     if(shift == radix::radix_traits<T>::MSB_bit)
     {
-        g_odata[global_tid + radix::radix_traits<T>::index(tid_offset + 0, middle)] = buffer[tid_offset + 0];
-        g_odata[global_tid + radix::radix_traits<T>::index(tid_offset + 1, middle)] = buffer[tid_offset + 1];
+        g_odata[global_tid + radix::radix_traits<T>::index(idx[tid_offset + 0], middle)] = g_idata[global_tid + tid_offset + 0];
+        g_odata[global_tid + radix::radix_traits<T>::index(idx[tid_offset + 1], middle)] = g_idata[global_tid + tid_offset + 1];
     }
     else
     {
-        g_odata[global_tid + tid_offset + 0] = buffer[(tid_offset + 0)];
-        g_odata[global_tid + tid_offset + 1] = buffer[(tid_offset + 1)];
+        g_odata[global_tid + idx[tid_offset + 0]] = g_idata[global_tid + tid_offset + 0];
+        g_odata[global_tid + idx[tid_offset + 1]] = g_idata[global_tid + tid_offset + 1];
     }
 }
 
