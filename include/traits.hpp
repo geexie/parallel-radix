@@ -1,8 +1,28 @@
 #ifndef __traits_hpp__
 #define __traits_hpp__
 
+#ifndef __CUDA_ARCH__
+# include <vector>
+
 namespace radix
 {
+class TestInfo
+{
+public:
+    void add(std::pair<size_t, double> res)
+    {
+        measurements.push_back(res);
+    }
+
+public:
+    std::vector<std::pair<size_t, double>> measurements;
+};
+}
+
+#endif
+namespace radix
+{
+
 template<typename T>
 struct radix_traits
 {

@@ -1,5 +1,6 @@
 #include <sort_algorithm.hpp>
 #include <traits.hpp>
+#include <timing.h>
 #include <omp.h>
 
 #include <iostream>
@@ -14,9 +15,9 @@ radix::OpenMPRadix<T>::OpenMPRadix()
     }
 
     num_threads = num;
-    l_partial =   new unsigned int[num_threads];
-    r_partial =  new unsigned int[num_threads];
-    l_sum =      new unsigned int[num_threads];
+    l_partial = new unsigned int[num_threads];
+    r_partial = new unsigned int[num_threads];
+    l_sum =     new unsigned int[num_threads];
     r_sum =     new unsigned int[num_threads];
 }
 
@@ -30,7 +31,7 @@ radix::OpenMPRadix<T>::~OpenMPRadix()
 }
 
 template<typename T>
-void radix::OpenMPRadix<T>::operator ()(T* typed_a, size_t len) const
+double radix::OpenMPRadix<T>::operator ()(T* typed_a, size_t len) const
 {
     typedef radix::radix_traits<T>::integer_type I;
     I *a = (I*)typed_a;
@@ -40,6 +41,7 @@ void radix::OpenMPRadix<T>::operator ()(T* typed_a, size_t len) const
     size_t work = len / num_threads + 1;;
     size_t i, mynum, last;
 
+    double time = (double)radix::getTickCount();
     for(I bit = 1; (bit & ~radix::radix_traits<T>::MSB_mask); bit <<=1, t = a, a = d, d = t)
     {
 #pragma omp parallel default(none) private(i, mynum, last) shared(bit, a, d, t, work, len)
@@ -110,11 +112,14 @@ void radix::OpenMPRadix<T>::operator ()(T* typed_a, size_t len) const
                 else
                     d[border + r_sum[mynum]++] = a[i];
         }
+    time = ((double)radix::getTickCount() - time)/radix::getTickFrequency();
     t = a; a = d; d = t;
     delete[] d;
+
+    return time;
 }
 
-void radix::OpenMPRadix<signed int>::operator ()(signed int* a, size_t len) const
+double radix::OpenMPRadix<signed int>::operator ()(signed int* a, size_t len) const
 {
     signed int *d = new signed int[len];
     signed int* t = 0;
@@ -122,6 +127,7 @@ void radix::OpenMPRadix<signed int>::operator ()(signed int* a, size_t len) cons
     size_t work = len / num_threads + 1;
     size_t i, mynum, last;
     unsigned int bit = 1;
+    double time = (double)radix::getTickCount();
     for(bit = 1; (bit & ~0x80000000U) ; bit <<=1, t = a, a = d, d = t)
     {
 #pragma omp parallel default(none) private(i, mynum, last) shared(bit, a, d, t, work, len)
@@ -191,13 +197,15 @@ void radix::OpenMPRadix<signed int>::operator ()(signed int* a, size_t len) cons
                 else
                     d[border + r_sum[mynum]++] = a[i];
         }
-
+    time = ((double)radix::getTickCount() - time)/radix::getTickFrequency();
     t = a; a = d; d = t;
     delete[] d;
+
+    return time;
 }
 
 template<>
-void radix::OpenMPRadix<unsigned int>::operator ()(unsigned int* a, size_t len) const
+double radix::OpenMPRadix<unsigned int>::operator ()(unsigned int* a, size_t len) const
 {
     unsigned int *d = new unsigned int[len];
     unsigned int* t = 0;
@@ -205,10 +213,13 @@ void radix::OpenMPRadix<unsigned int>::operator ()(unsigned int* a, size_t len) 
     size_t work = len / num_threads + 1;
     size_t i, tid, last;
     unsigned int bit = 1;
-    for(bit = 1; bit; bit <<=1, t = a, a = d, d = t)
+    double time = (double)radix::getTickCount();
+#pragma omp parallel default(none) private(i, tid, last, bit) shared( a, d, t, work, len)
+{
+    for(bit = 1; bit; bit <<=1)
     {
-#pragma omp parallel default(none) private(i, tid, last) shared(bit, a, d, t, work, len)
-        {
+#pragma omp barrier
+//        {
             tid = omp_get_thread_num();
             l_partial[tid]= r_partial[tid] = 0;
 
@@ -238,13 +249,22 @@ void radix::OpenMPRadix<unsigned int>::operator ()(unsigned int* a, size_t len) 
                     d[l_sum[tid]++] = a[i];
                 else
                     d[border + r_sum[tid]++] = a[i];
+//        }
+#pragma omp barrier
+        if (tid == 0)
+        {
+            t = a; a = d; d = t;
         }
     }
+}
+    time = ((double)radix::getTickCount() - time)/radix::getTickFrequency();
     delete[] d;
+
+    return time;
 }
 
-template void radix::OpenMPRadix<float>::operator()(float*, size_t) const;
-template void radix::OpenMPRadix<double>::operator()(double*, size_t) const;
+template double radix::OpenMPRadix<float>::operator()(float*, size_t) const;
+template double radix::OpenMPRadix<double>::operator()(double*, size_t) const;
 
 template radix::OpenMPRadix<float>::OpenMPRadix();
 template radix::OpenMPRadix<double>::OpenMPRadix();
