@@ -1,6 +1,7 @@
 #include <cuda_radix.h>
 #include <iostream>
 #include <traits.hpp>
+#include <timer.cuh>
 
 
 template<typename T>
@@ -41,8 +42,8 @@ __device__ void blelloch_scan_step(T *g_idata, T *g_odata , size_t n,typename ra
     int thid = threadIdx.x;
     int global_tid = blockIdx.x * blockDim.x * 2;
 
-    I* bit = &((I*)temp1)[0];
-    I* idx = &((I*)temp1)[n];
+    size_t* bit = &((size_t*)temp1)[0];
+    size_t* idx = &((size_t*)temp1)[n];
     size_t tid_offset = 2 * thid;
 
     int offset = 1;
@@ -121,12 +122,16 @@ __global__ void blelloch_scan_radix(T *a_p, T *d_p , int len)
 }
 
 template<typename T>
-void cuda_radix_coller_internal(T* a, T* d, size_t len)
+double cuda_radix_coller_internal(T* a, T* d, size_t len)
 {
-    int threads = (len <= 256) ? len : 256;
-    int log_threads = 8;
-    int groups = (len <= 256) ? 1 : len >> log_threads;
+    int threads = (len <= 512) ? len : 512;
+    int log_threads = 9;
+    int groups = (len <= 512) ? 1 : len >> log_threads;
+    Timer timer;
+    timer.go();
     blelloch_scan_radix<T><<<groups, (threads >> 1), 2 * threads * sizeof(T)>>>(a, d, threads);
+    cudaThreadSynchronize();
+    float ms = timer.measure();
     cudaDeviceSynchronize();
     if(len > 256)
         for (size_t k = threads; k <= len; k <<= 1)
@@ -136,24 +141,25 @@ void cuda_radix_coller_internal(T* a, T* d, size_t len)
                 bitonic_sort_step<T><<<groups, threads >>>(a, j, k);
             }
         }
+    return ms;
 }
 
-void cuda_radix_coller(unsigned int* a, unsigned int* d, size_t len)
+double cuda_radix_coller(unsigned int* a, unsigned int* d, size_t len)
 {
-    cuda_radix_coller_internal<unsigned int>(a,d,len);
+    return cuda_radix_coller_internal<unsigned int>(a,d,len);
 }
 
-void cuda_radix_coller(signed int* a, signed int* d, size_t len)
+double cuda_radix_coller(signed int* a, signed int* d, size_t len)
 {
-    cuda_radix_coller_internal<signed int>(a,d,len);
+    return cuda_radix_coller_internal<signed int>(a,d,len);
 }
 
-void cuda_radix_coller(float* a, float* d, size_t len)
+double cuda_radix_coller(float* a, float* d, size_t len)
 {
-    cuda_radix_coller_internal<float>(a,d,len);
+    return cuda_radix_coller_internal<float>(a,d,len);
 }
 
-void cuda_radix_coller(double* a, double* d, size_t len)
+double cuda_radix_coller(double* a, double* d, size_t len)
 {
-    cuda_radix_coller_internal<double>(a,d,len);
+    return cuda_radix_coller_internal<double>(a,d,len);
 }

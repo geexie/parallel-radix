@@ -1,6 +1,7 @@
 #include <sort_algorithm.hpp>
 #include <traits.hpp>
 #include <tbb/tbb.h>
+#include <timing.h>
 
 template<typename T>
 struct UnsignedOrder
@@ -69,28 +70,33 @@ private:
 };
 
 template<>
-void radix::TBBRadix<unsigned int>::operator ()(unsigned int* a, size_t len) const
+double radix::TBBRadix<unsigned int>::operator ()(unsigned int* a, size_t len) const
 {
     unsigned int* d = new unsigned int[len];
     unsigned int* s = a;
     unsigned int* t;
 
+    double time = (double)radix::getTickCount();
     for (unsigned int bit = 1; bit; bit <<= 1, t = s, s = d, d = t)
     {
         TBBRadixScanTask<unsigned int, UnsignedOrder<unsigned int> > body(s, d, len, bit);
         tbb::parallel_scan( tbb::blocked_range<int>(0, len, 4), body);
     }
+    time = ((double)radix::getTickCount() - time)/radix::getTickFrequency();
+
     delete[] d;
+    return time;
 }
 
 template<typename T>
-void radix::TBBRadix<T>::operator ()(T* typed_a, size_t len) const
+double radix::TBBRadix<T>::operator ()(T* typed_a, size_t len) const
 {
     typedef radix::radix_traits<T>::integer_type I;
     I *a = (I*)typed_a;
     I *d = new I[len];
     I* t;
 
+    double time = (double)radix::getTickCount();
     for (I bit = 1; (bit & ~radix::radix_traits<T>::MSB_mask); bit <<= 1, t = a, a = d, d = t)
     {
         TBBRadixScanTask<I, UnsignedOrder<I> > body(a, d, len, bit);
@@ -121,10 +127,13 @@ void radix::TBBRadix<T>::operator ()(T* typed_a, size_t len) const
         else
             d[r_bound++] = a[i];
     }
+    time = ((double)radix::getTickCount() - time)/radix::getTickFrequency();
     t = a; a = d; d = t;
     delete[] d;
+
+    return time;
 }
 
-template void radix::TBBRadix<float>::operator()(float*, size_t) const;
-template void radix::TBBRadix<double>::operator()(double*, size_t) const;
-template void radix::TBBRadix<signed int>::operator()(signed int*, size_t) const;
+template double radix::TBBRadix<float>::operator()(float*, size_t) const;
+template double radix::TBBRadix<double>::operator()(double*, size_t) const;
+template double radix::TBBRadix<signed int>::operator()(signed int*, size_t) const;

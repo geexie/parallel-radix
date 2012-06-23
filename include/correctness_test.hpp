@@ -40,7 +40,6 @@ bool sortCorrectnessTest(size_t size, T l_bound, T r_bound)
 {
     T * arr =  new T[size];
     T * gold = new T[size];
-//    T * init = new T[size];
 
     T sign = random_traits<T>::sign;
     random_traits<T>::urand_gen urand(l_bound, r_bound);
