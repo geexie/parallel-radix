@@ -36,6 +36,14 @@ add_custom_command(OUTPUT ${CILK_RADIX_OBJ}
                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
                    MAIN_DEPENDENCY ${INTEL_SOURCE_FILE})
 
+set(INTEL_OMP_SOURCE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/with_omp.cpp")
+set(OMP_RADIX_OBJ "${CMAKE_BINARY_DIR}/with_omp.obj")
+add_custom_command(OUTPUT ${OMP_RADIX_OBJ}
+                   COMMAND ${INTEL_COMPILER_EXE}
+                   ARGS /c /Iinclude /I${INTEL_INCLUDE_DIR} /Fo${OMP_RADIX_OBJ} ${INTEL_OMP_SOURCE_FILE}
+                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                   MAIN_DEPENDENCY ${INTEL_OMP_SOURCE_FILE})
+
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-gencode arch=compute_20,code=compute_20")
 cuda_compile(CUDA_RADIX_OBJ  "${CMAKE_CURRENT_SOURCE_DIR}/src/radix.cu")
 message("!!!!!!11${CUDA_RADIX_OBJ}")
@@ -43,9 +51,11 @@ message("!!!!!!11${CUDA_RADIX_OBJ}")
 add_executable( ${THE_TARGET} "${CMAKE_CURRENT_SOURCE_DIR}/src/radix.cpp"
                               "${CMAKE_CURRENT_SOURCE_DIR}/src/sequential.cpp"
                               "${CMAKE_CURRENT_SOURCE_DIR}/src/with_tbb.cpp"
-                              "${CMAKE_CURRENT_SOURCE_DIR}/src/with_omp.cpp"
+                              #"${CMAKE_CURRENT_SOURCE_DIR}/src/with_omp.cpp"
                               "${CMAKE_CURRENT_SOURCE_DIR}/src/with_cuda.cpp"
+                              "${CMAKE_CURRENT_SOURCE_DIR}/src/timing.cpp"
                                ${CUDA_RADIX_OBJ}
+                               ${OMP_RADIX_OBJ}
                               "${CILK_RADIX_OBJ}")
 
 set(${THE_TARGET}_LINK_LIST "")

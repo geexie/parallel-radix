@@ -1,8 +1,9 @@
 #include <sort_algorithm.hpp>
 #include <traits.hpp>
+#include <timing.h>
 
 template<typename T>
-void radix::SequentalRadix<T>::operator ()(T* typed_a, size_t len) const
+double radix::SequentalRadix<T>::operator ()(T* typed_a, size_t len) const
 {
     typedef radix::radix_traits<T>::integer_type I;
     I *a = (I*)typed_a;
@@ -10,7 +11,7 @@ void radix::SequentalRadix<T>::operator ()(T* typed_a, size_t len) const
     I* t;
 
     unsigned is, id0, id1;
-
+    double time = (double)radix::getTickCount();
     for (I bit = 1; (bit & ~radix::radix_traits<T>::MSB_mask); bit <<= 1, t = a, a = d, d = t)
     {
         for (is = id0 = 0, id1 = len; id1 > id0; ++is)
@@ -43,18 +44,21 @@ void radix::SequentalRadix<T>::operator ()(T* typed_a, size_t len) const
         else
             d[r_bound++] = a[i];
     }
+    time = ((double)radix::getTickCount() - time)/radix::getTickFrequency();
     t = a; a = d; d = t;
     delete[] d;
+
+    return time;
 }
 
 template<>
-void radix::SequentalRadix<unsigned int>::operator ()(unsigned int* a, size_t len) const
+double radix::SequentalRadix<unsigned int>::operator ()(unsigned int* a, size_t len) const
 {
         unsigned int *s = a;
         unsigned int *d = new unsigned int[len];
         unsigned int *t;
         unsigned bit, is, id0, id1;
-
+        double time = (double)radix::getTickCount();
         for (bit = 1; bit; bit <<= 1, t = s, s = d, d = t)
             for (is = id0 = 0, id1 = len; id1 > id0; ++is)
                 //reopder by Gray order
@@ -62,9 +66,12 @@ void radix::SequentalRadix<unsigned int>::operator ()(unsigned int* a, size_t le
                     d[--id1] = s[is];
                 else
                     d[id0++] = s[is];
+        time = ((double)radix::getTickCount() - time)/radix::getTickFrequency();
         delete[] d;
+
+        return time;
 }
 
-template void radix::SequentalRadix<float>::operator()(float*, size_t) const;
-template void radix::SequentalRadix<double>::operator()(double*, size_t) const;
-template void radix::SequentalRadix<signed int>::operator()(signed int*, size_t) const;
+template double radix::SequentalRadix<float>::operator()(float*, size_t) const;
+template double radix::SequentalRadix<double>::operator()(double*, size_t) const;
+template double radix::SequentalRadix<signed int>::operator()(signed int*, size_t) const;

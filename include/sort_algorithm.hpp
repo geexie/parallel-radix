@@ -1,5 +1,6 @@
 #ifndef __sort_algorithm_h__
 #define __sort_algorithm_h__
+#include <traits.hpp>
 //#include <algorithm>
 
 namespace radix
@@ -20,7 +21,7 @@ class SequentalRadix
 {
 public:
     SequentalRadix(){}
-    void operator ()(T* arr, size_t size) const;
+    double operator ()(T* arr, size_t size) const;
 };
 
 template<typename T>
@@ -28,7 +29,7 @@ class TBBRadix
 {
 public:
     TBBRadix(){}
-    void operator ()(T* arr, size_t size) const;
+    double operator ()(T* arr, size_t size) const;
 };
 
 template<typename T>
@@ -37,7 +38,7 @@ class OpenMPRadix
 public:
     OpenMPRadix();
     ~OpenMPRadix();
-    void operator ()(T* arr, size_t size) const;
+    double operator ()(T* arr, size_t size) const;
 private:
     size_t num_threads;
     unsigned int* l_partial;
@@ -51,7 +52,7 @@ class CudaRadix
 {
 public:
     CudaRadix(){}
-    void operator ()(T* arr, size_t size) const;
+    double operator ()(T* arr, size_t size) const;
 };
 
 template<typename T>
@@ -59,7 +60,7 @@ class SilkRadix
 {
 public:
     SilkRadix(){}
-    void operator ()(T* arr, size_t size) const;
+    double operator ()(T* arr, size_t size) const;
 };
 }
 

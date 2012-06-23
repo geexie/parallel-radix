@@ -1,10 +1,11 @@
 #include <sort_algorithm.hpp>
 #include <traits.hpp>
 #include <stdio.h>
+#include <timing.h>
 #include "cilk/cilk.h"
 
 template<typename T>
-void radix::SilkRadix<T>::operator ()(T* typed_a, size_t len) const
+double radix::SilkRadix<T>::operator ()(T* typed_a, size_t len) const
 {
     typedef radix::radix_traits<T>::integer_type I;
     I *a = (I*)typed_a;
@@ -15,6 +16,7 @@ void radix::SilkRadix<T>::operator ()(T* typed_a, size_t len) const
     size_t* l_bounds = new size_t[block];
     size_t* r_bounds = new size_t[block];
 
+    double time  = (double)radix::getTickCount();
     for (I bit = 1; ( bit & ~radix::radix_traits<T>::MSB_mask); bit <<= 1)
     {
         for(int i = 0; i < block; i++)
@@ -22,7 +24,7 @@ void radix::SilkRadix<T>::operator ()(T* typed_a, size_t len) const
             l_bounds[i] = r_bounds[i] = 0;
         }
 
-        for(int k = 0; k < block; k++)
+        cilk_for(int k = 0; k < block; k++)
         {
             for (int i = 0; i < k * len / block; ++i)
             {
@@ -33,7 +35,7 @@ void radix::SilkRadix<T>::operator ()(T* typed_a, size_t len) const
             }
         }
 
-        for(int k = 0; k < block; k++)
+        cilk_for(int k = 0; k < block; k++)
         {
             for (int i = k * len / block; i < (k+1) * len / block; ++i)
             {
@@ -68,8 +70,10 @@ void radix::SilkRadix<T>::operator ()(T* typed_a, size_t len) const
         else
             d[r_bound++] = a[i];
     }
+    time = ((double)radix::getTickCount() - time)/radix::getTickFrequency();
     t = a; a = d; d = t;
     delete[] d;
+    return time;
 }
 
 struct bounds
@@ -80,7 +84,7 @@ struct bounds
 
 
 template<>
-void radix::SilkRadix<unsigned int>::operator ()(unsigned int* a, size_t len) const
+double radix::SilkRadix<unsigned int>::operator ()(unsigned int* a, size_t len) const
 {
     unsigned int *d = new unsigned int[len];
     unsigned int *t;
@@ -89,6 +93,7 @@ void radix::SilkRadix<unsigned int>::operator ()(unsigned int* a, size_t len) co
     size_t* l_bounds = new size_t[block];
     size_t* r_bounds = new size_t[block];
 
+    double time = (double)radix::getTickCount();
     for (unsigned bit = 1; bit; bit <<= 1)
     {
         for(int i = 0; i < block; i++)
@@ -119,9 +124,12 @@ void radix::SilkRadix<unsigned int>::operator ()(unsigned int* a, size_t len) co
         }
         t = a; a = d; d = t;
     }
+    time = ((double)radix::getTickCount() - time)/radix::getTickFrequency();
     delete[] d;
+
+    return time;
 }
 
-template void radix::SilkRadix<float>::operator()(float*, size_t) const;
-template void radix::SilkRadix<double>::operator()(double*, size_t) const;
-template void radix::SilkRadix<signed int>::operator()(signed int*, size_t) const;
+template double radix::SilkRadix<float>::operator()(float*, size_t) const;
+template double radix::SilkRadix<double>::operator()(double*, size_t) const;
+template double radix::SilkRadix<signed int>::operator()(signed int*, size_t) const;
