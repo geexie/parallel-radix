@@ -1,7 +1,7 @@
 #ifndef __sort_algorithm_h__
 #define __sort_algorithm_h__
 #include <traits.hpp>
-//#include <algorithm>
+#include <algorithm>
 
 namespace radix
 {

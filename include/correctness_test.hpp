@@ -1,6 +1,12 @@
 #ifndef __correctness_test_hpp__
 #define __correctness_test_hpp__
-#include <random>
+
+#ifdef _MSC_VER
+# include <random>
+#else
+# include <tr1/random>
+#endif
+
 #include <sort_algorithm.hpp>
 #include <bitset>
 
@@ -42,7 +48,7 @@ bool sortCorrectnessTest(size_t size, T l_bound, T r_bound)
     T * gold = new T[size];
 
     T sign = random_traits<T>::sign;
-    random_traits<T>::urand_gen urand(l_bound, r_bound);
+    typename random_traits<T>::urand_gen urand(l_bound, r_bound);
     std::tr1::mt19937 eng;
 
     for (size_t i = 0; i < size; ++i)

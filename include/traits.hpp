@@ -15,7 +15,7 @@ public:
     }
 
 public:
-    std::vector<std::pair<size_t, double>> measurements;
+    std::vector<std::pair<size_t, double> > measurements;
 };
 }
 
