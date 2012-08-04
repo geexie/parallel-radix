@@ -4,9 +4,12 @@
 
 #include <cuda.h>
 #include <cuda_runtime_api.h>
+#include <stdio.h>
+
+namespace radix {
 
 template<typename T>
-double radix::CudaRadix<T>::operator ()(T* a, size_t len) const
+double CudaRadix<T>::operator ()(T* a, size_t len) const
 {
     T* d_a, *d_d;
     cudaMalloc((void**)&d_a, len * sizeof(T));
@@ -22,7 +25,8 @@ double radix::CudaRadix<T>::operator ()(T* a, size_t len) const
     return time;
 }
 
-template double radix::CudaRadix<float>::operator()(float*, size_t) const;
-template double radix::CudaRadix<double>::operator()(double*, size_t) const;
-template double radix::CudaRadix<signed int>::operator()(signed int*, size_t) const;
-template double radix::CudaRadix<unsigned int>::operator()(unsigned int*, size_t) const;
+template double CudaRadix<float>::operator()(float*, size_t) const;
+template double CudaRadix<double>::operator()(double*, size_t) const;
+template double CudaRadix<signed int>::operator()(signed int*, size_t) const;
+template double CudaRadix<unsigned int>::operator()(unsigned int*, size_t) const;
+}

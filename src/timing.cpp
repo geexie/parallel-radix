@@ -1,11 +1,11 @@
 #include <timing.h>
-#include <Windows.h>
+
+#if defined WIN32 || defined _WIN32 || defined WINCE
+# include <Windows.h>
 
 LARGE_INTEGER timerFreq_;
 LARGE_INTEGER counterAtStart_;
 
-
-#if defined WIN32 || defined _WIN32 || defined WINCE
 #include <tchar.h>
 #if defined _MSC_VER
   #if _MSC_VER >= 1400
@@ -31,32 +31,28 @@ LARGE_INTEGER counterAtStart_;
   #endif
 #endif
 #else
-#include <pthread.h>
-#include <sys/time.h>
-#include <time.h>
+# include <pthread.h>
+# include <sys/time.h>
+# include <time.h>
 
-#if defined __MACH__ && defined __APPLE__
-#include <mach/mach.h>
-#include <mach/mach_time.h>
-#endif
+# if defined __MACH__ && defined __APPLE__
+#  include <mach/mach.h>
+#  include <mach/mach_time.h>
+# endif
 
-#endif
-
-#ifdef _OPENMP
-#include "omp.h"
 #endif
 
 #include <stdarg.h>
 
 #if defined __linux__ || defined __APPLE__
-#include <unistd.h>
-#include <stdio.h>
-#include <sys/types.h>
-#if defined ANDROID
-#include <sys/sysconf.h>
-#else
-#include <sys/sysctl.h>
-#endif
+# include <unistd.h>
+# include <stdio.h>
+# include <sys/types.h>
+# if defined ANDROID
+#  include <sys/sysconf.h>
+# else
+#  include <sys/sysctl.h>
+# endif
 #endif
 
 
@@ -69,7 +65,7 @@ long long radix::getTickCount(void)
 #elif defined __linux || defined __linux__
     struct timespec tp;
     clock_gettime(CLOCK_MONOTONIC, &tp);
-    return (int64)tp.tv_sec*1000000000 + tp.tv_nsec;
+    return (long long)tp.tv_sec*1000000000 + tp.tv_nsec;
 #elif defined __MACH__ && defined __APPLE__
     return (int64)mach_absolute_time();
 #else

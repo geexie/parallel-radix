@@ -12,67 +12,62 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(TNNS_CMAKE_DIR "${CMAKE_SOURCE_DIR}/cmake")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${TNNS_CMAKE_DIR}")
 
-find_package(TBB REQUIRED)
-include_directories(${TBB_INCLUDE_DIRS})
+#find_package(TBB REQUIRED)
+#include_directories(${TBB_INCLUDE_DIRS})
 
-find_package(OpenMP REQUIRED)
+#find_package(OpenMP REQUIRED)
 
 find_package(CUDA REQUIRED)
 include_directories(${CUDA_INCLUDE_DIRS})
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS} /NODEFAULTLIB:LIBCMT")
+#set(CMAKE_C_FLAGS "-std=gnu++0x")
+#set(CMAKE_CXX_FLAGS "-std=gnu++0x")
+#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS} /NODEFAULTLIB:LIBCMT")
 
-include("${TNNS_CMAKE_DIR}/DetectIntelCompiler.cmake")
-find_intel_compiler()
+#include("${TNNS_CMAKE_DIR}/DetectIntelCompiler.cmake")
+#find_intel_compiler()
 
-set(INTEL_SOURCE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/with_cilk.cpp")
-set(CILK_RADIX_OBJ "${CMAKE_BINARY_DIR}/with_cilk.obj")
+#set(INTEL_SOURCE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/with_cilk.cpp")
+#set(CILK_RADIX_OBJ "${CMAKE_BINARY_DIR}/with_cilk.obj")
 
-add_custom_command(OUTPUT ${CILK_RADIX_OBJ}
-                   COMMAND ${INTEL_COMPILER_EXE}
-                   ARGS /c /Iinclude /I${INTEL_INCLUDE_DIR} /Fo${CILK_RADIX_OBJ} ${INTEL_SOURCE_FILE}
-                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                   MAIN_DEPENDENCY ${INTEL_SOURCE_FILE})
-
-set(INTEL_OMP_SOURCE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/with_omp.cpp")
-set(OMP_RADIX_OBJ "${CMAKE_BINARY_DIR}/with_omp.obj")
-add_custom_command(OUTPUT ${OMP_RADIX_OBJ}
-                   COMMAND ${INTEL_COMPILER_EXE}
-                   ARGS /c /Iinclude /I${INTEL_INCLUDE_DIR} /Fo${OMP_RADIX_OBJ} ${INTEL_OMP_SOURCE_FILE}
-                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                   MAIN_DEPENDENCY ${INTEL_OMP_SOURCE_FILE})
+#add_custom_command(OUTPUT ${CILK_RADIX_OBJ}
+#                   COMMAND ${INTEL_COMPILER_EXE}
+#                   ARGS /c /Iinclude /I${INTEL_INCLUDE_DIR} /Fo${CILK_RADIX_OBJ} ${INTEL_SOURCE_FILE}
+#                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+#                   MAIN_DEPENDENCY ${INTEL_SOURCE_FILE})
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-gencode arch=compute_20,code=compute_20")
 cuda_compile(CUDA_RADIX_OBJ  "${CMAKE_CURRENT_SOURCE_DIR}/src/radix.cu")
 message("!!!!!!11${CUDA_RADIX_OBJ}")
 
+#set(CMAKE_C_FLAGS "-std=gnu++11")
+#set(CMAKE_CXX_FLAGS "-std=gnu++11")
+
 add_executable( ${THE_TARGET} "${CMAKE_CURRENT_SOURCE_DIR}/src/radix.cpp"
                               "${CMAKE_CURRENT_SOURCE_DIR}/src/sequential.cpp"
-                              "${CMAKE_CURRENT_SOURCE_DIR}/src/with_tbb.cpp"
+                              "${CMAKE_CURRENT_SOURCE_DIR}/src/timing.cpp"
+                              #"${CMAKE_CURRENT_SOURCE_DIR}/src/with_tbb.cpp"
                               #"${CMAKE_CURRENT_SOURCE_DIR}/src/with_omp.cpp"
                               "${CMAKE_CURRENT_SOURCE_DIR}/src/with_cuda.cpp"
-                              "${CMAKE_CURRENT_SOURCE_DIR}/src/timing.cpp"
                                ${CUDA_RADIX_OBJ}
-                               ${OMP_RADIX_OBJ}
-                              "${CILK_RADIX_OBJ}")
+                              #"${CILK_RADIX_OBJ}"
+                            )
 
 set(${THE_TARGET}_LINK_LIST "")
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" )
-    list(APPEND ${THE_TARGET}_LINK_LIST ${TBB_DEBUG_LIBRARIES})
-    set(TBB_SO_NAME "tbb_debug")
-else()
-    list(APPEND ${THE_TARGET}_LINK_LIST ${TBB_LIBRARIES})
-    set(TBB_SO_NAME "tbb")
-endif()
+#if(CMAKE_BUILD_TYPE STREQUAL "Debug" )
+#    list(APPEND ${THE_TARGET}_LINK_LIST ${TBB_DEBUG_LIBRARIES})
+#    set(TBB_SO_NAME "tbb_debug")
+#else()
+#    list(APPEND ${THE_TARGET}_LINK_LIST ${TBB_LIBRARIES})
+#    set(TBB_SO_NAME "tbb")
+#endif()
 
-list(APPEND ${THE_TARGET}_LINK_LIST "${INTEL_LIBRARY_PATH}/libmmt.lib"
-                                    "${INTEL_LIBRARY_PATH}/libirc.lib"
-                                    "${INTEL_LIBRARY_PATH}/svml_dispmt.lib"
-                                    "${INTEL_LIBRARY_PATH}/libdecimal.lib"
-                                    "${INTEL_LIBRARY_PATH}/cilkrts.lib")
+#list(APPEND ${THE_TARGET}_LINK_LIST "${INTEL_LIBRARY_PATH}/libmmt.lib"
+#                                    "${INTEL_LIBRARY_PATH}/libirc.lib"
+#                                    "${INTEL_LIBRARY_PATH}/svml_dispmt.lib"
+#                                    "${INTEL_LIBRARY_PATH}/libdecimal.lib"
+#                                    "${INTEL_LIBRARY_PATH}/cilkrts.lib")
 
 target_link_libraries(${THE_TARGET} ${${THE_TARGET}_LINK_LIST} ${CUDA_LIBRARIES})
 
@@ -83,7 +78,7 @@ set_target_properties(${THE_TARGET} PROPERTIES
         LINKER_LANGUAGE CXX
     )
 
-string(REPLACE "${TBB_INSTALL_DIR}/lib/" "/" TBB_PLATFORM_COMPILER_PATH ${TBB_LIBRARY_DIRS})
-set(TBB_SO_PATH "${TBB_INSTALL_DIR}/bin${TBB_PLATFORM_COMPILER_PATH}")
-add_custom_command(TARGET ${THE_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND}
--E copy "${TBB_SO_PATH}/${TBB_SO_NAME}.dll" "${EXECUTABLE_OUTPUT_PATH}/${TBB_SO_NAME}.dll")
+#string(REPLACE "${TBB_INSTALL_DIR}/lib/" "/" TBB_PLATFORM_COMPILER_PATH ${TBB_LIBRARY_DIRS})
+#set(TBB_SO_PATH "${TBB_INSTALL_DIR}/bin${TBB_PLATFORM_COMPILER_PATH}")
+#add_custom_command(TARGET ${THE_TARGET} POST_BUILD COMMAND ${CMAKE_COMMAND}
+#-E copy "${TBB_SO_PATH}/${TBB_SO_NAME}.dll" "${EXECUTABLE_OUTPUT_PATH}/${TBB_SO_NAME}.dll")

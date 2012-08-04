@@ -2,10 +2,13 @@
 #include <traits.hpp>
 #include <timing.h>
 
-template<typename T>
-double radix::SequentalRadix<T>::operator ()(T* typed_a, size_t len) const
+namespace radix
 {
-    typedef radix::radix_traits<T>::integer_type I;
+
+template<typename T>
+double SequentalRadix<T>::operator ()(T* typed_a, size_t len) const
+{
+    typedef typename radix::radix_traits<T>::integer_type I;
     I *a = (I*)typed_a;
     I *d = new I[len];
     I* t;
@@ -52,7 +55,7 @@ double radix::SequentalRadix<T>::operator ()(T* typed_a, size_t len) const
 }
 
 template<>
-double radix::SequentalRadix<unsigned int>::operator ()(unsigned int* a, size_t len) const
+double SequentalRadix<unsigned int>::operator ()(unsigned int* a, size_t len) const
 {
         unsigned int *s = a;
         unsigned int *d = new unsigned int[len];
@@ -72,6 +75,8 @@ double radix::SequentalRadix<unsigned int>::operator ()(unsigned int* a, size_t 
         return time;
 }
 
-template double radix::SequentalRadix<float>::operator()(float*, size_t) const;
-template double radix::SequentalRadix<double>::operator()(double*, size_t) const;
-template double radix::SequentalRadix<signed int>::operator()(signed int*, size_t) const;
+template double SequentalRadix<float>::operator()(float*, size_t) const;
+template double SequentalRadix<double>::operator()(double*, size_t) const;
+template double SequentalRadix<signed int>::operator()(signed int*, size_t) const;
+
+}

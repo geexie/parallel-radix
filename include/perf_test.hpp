@@ -9,7 +9,7 @@ std::pair<size_t, double> sortPerformanceTestStep(size_t size, T l_bound, T r_bo
     T * arr =  new T[size];
 
     T sign = random_traits<T>::sign;
-    random_traits<T>::urand_gen urand(l_bound, r_bound);
+    typename random_traits<T>::urand_gen urand(l_bound, r_bound);
     std::tr1::mt19937 eng;
 
     for (size_t i = 0; i < size; ++i)
